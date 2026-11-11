@@ -295,6 +295,44 @@ class TestFeedDescription(unittest.TestCase):
                     "",
                 )
 
+    def test_comment_only_excerpts_log_compliance_warning(self):
+        for source in ("<!-- TODO -->", " \n<!-- first -->\n<!-- second -->\t"):
+            for delimiter in (None, "", "<!-- more -->", "[CUT]"):
+                with self.subTest(source=source, delimiter=delimiter):
+                    self.page.markdown = source
+                    if delimiter:
+                        self.page.markdown += f"{delimiter}\nVisible after delimiter."
+                    with self.assertLogs(
+                        "properdocs.plugins.[RSS-plugin]", "WARNING"
+                    ) as logs:
+                        description = self.utils.get_description_or_abstract(
+                            self.page,
+                            chars_count=160,
+                            abstract_delimiter=delimiter,
+                        )
+                    self.assertEqual(description, "")
+                    self.assertIn(
+                        "No description generated from metadata or content of the page page.md, "
+                        "therefore the feed won't be compliant, "
+                        "because an item must have a description.",
+                        logs.output[0],
+                    )
+
+    def test_delimiter_at_start_keeps_empty_excerpt_without_warning(self):
+        for delimiter in ("<!-- more -->", "[CUT]"):
+            for chars_count in (0, 160):
+                with self.subTest(delimiter=delimiter, chars_count=chars_count):
+                    self.page.markdown = f"{delimiter}\nVisible after delimiter."
+                    with self.assertNoLogs(
+                        "properdocs.plugins.[RSS-plugin]", "WARNING"
+                    ):
+                        description = self.utils.get_description_or_abstract(
+                            self.page,
+                            chars_count=chars_count,
+                            abstract_delimiter=delimiter,
+                        )
+                    self.assertEqual(description, "")
+
 
 # ##############################################################################
 # ##### Stand alone program ########

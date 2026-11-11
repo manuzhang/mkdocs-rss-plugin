@@ -544,8 +544,14 @@ class Util:
             excerpt_separator_position = (
                 page_markdown.find(abstract_delimiter) if abstract_delimiter else -1
             )
-            if excerpt_separator_position == -1 and (
-                chars_count <= 0 or not page_markdown
+            if excerpt_separator_position > -1:
+                page_markdown = page_markdown[:excerpt_separator_position]
+            # Strip before checking emptiness, measuring or cutting the excerpt
+            page_markdown = self.strip_html_comments(page_markdown)
+            # Preserve the intentionally empty excerpt when the delimiter is first
+            if excerpt_separator_position != 0 and (
+                (excerpt_separator_position == -1 and chars_count <= 0)
+                or not page_markdown.strip()
             ):
                 logger.warning(
                     f"No description generated from metadata or content of the page {in_page.file.src_uri}, "
@@ -554,10 +560,6 @@ class Util:
                 )
                 return ""
 
-            if excerpt_separator_position > -1:
-                page_markdown = page_markdown[:excerpt_separator_position]
-            # Strip before measuring or cutting to avoid exposing partial comments
-            page_markdown = self.strip_html_comments(page_markdown)
             if excerpt_separator_position == -1 and len(page_markdown) > chars_count:
                 page_markdown = f"{page_markdown[: chars_count - 3]}..."
             description = markdown.markdown(page_markdown, output_format="html5")
